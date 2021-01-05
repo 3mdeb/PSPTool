@@ -112,8 +112,8 @@ class Directory(NestedBuffer):
             #  -> most ROMs are 16 MB in size, so addresses are starting at 0xFF000000
             entry_fields['offset'] &= 0x00FFFFFF
             #  -> some ROMs are 8 MB in size, so addresses are starting at 0xFF800000
-            # if len(self.blob) == 0x800000:
-            #     entry_fields['offset'] &= 0x7FFFFF
+            if len(self.blob) == 0x800000:
+                entry_fields['offset'] &= 0x7FFFFF
 
             if entry_fields['type'] in [ 0x0, 0x9, 0xa, 0x5, 0xd ]:
                 entry = Entry.from_fields(self, self.parent_buffer,
@@ -137,8 +137,8 @@ class Directory(NestedBuffer):
             #  -> most ROMs are 16 MB in size, so addresses are starting at 0xFF000000
             entry_fields['offset'] &= 0x00FFFFFF
             #  -> some ROMs are 8 MB in size, so addresses are starting at 0xFF800000
-            # if len(self.blob) == 0x800000:
-            #     entry_fields['offset'] &= 0x7FFFFF
+            if len(self.blob) == 0x800000:
+                entry_fields['offset'] &= 0x7FFFFF
 
             entry = Entry.from_fields(self, self.parent_buffer,
                                       entry_fields['type'],
