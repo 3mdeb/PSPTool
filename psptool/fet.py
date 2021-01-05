@@ -54,7 +54,7 @@ class Fet(NestedBuffer):
         self.fet_size = size
 
     def _determine_rom(self):
-        self.mask = 0x00FFFFFF
+        self.mask = 0x001FFFFF
         self.blob_offset = self.fet_offset - 0x20000 #TODO don't assume this offset
 
     def _create_dir(self, addr, magic):
