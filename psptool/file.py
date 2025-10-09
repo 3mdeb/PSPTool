@@ -267,6 +267,8 @@ class File(NestedBuffer):
                 return KeyStoreFile(*file_args)
             elif entry.type not in cls.NO_HDR_ENTRY_TYPES + SECONDARY_DIRECTORY_ENTRY_TYPES:
                 return HeaderFile(*file_args)
+            elif type(entry) == BiosDirectoryEntry and entry.type == 0x66:
+                return MicrocodeFile(*file_args)
             else:
                 return cls(*file_args)
         except File.ParseError as e:
@@ -401,3 +403,22 @@ class BiosFile(File):
 
     def get_readable_destination_address(self):
         return hex(self.destination)
+
+class MicrocodeFile(BiosFile):
+    def __init__(self, parent_directory, parent_buffer, offset, entry, blob, psptool):
+        super().__init__(parent_directory, parent_buffer, offset, entry, blob, psptool)
+        self.date = struct.unpack('<I', self[0:4])[0]
+        self.patch_level = struct.unpack('<I', self[4:8])[0]
+        self.year = (self.date & 0xf) + (self.date >> 4 & 0xf) * 10
+        self.year += ((self.date >> 8) & 0xf) * 100 + (self.date >> 12 & 0xf) * 1000
+        self.month = (self.date >> 16 & 0xf) + ((self.date >> 20) & 0xf) * 10
+        self.day = (self.date >> 24 & 0xf) + ((self.date >> 28) & 0xf) * 10
+
+    def get_readable_version(self):
+        return f'{hex(self.patch_level)}'
+
+    def get_readable_date(self):
+        return '%.2d/%.2d/%.4d' % (self.day, self.month, self.year)
+
+    def __repr__(self):
+        return super().__repr__()[:-1] + self.get_readable_version() + self.get_readable_date()

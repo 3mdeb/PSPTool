@@ -17,7 +17,7 @@
 from prettytable import PrettyTable
 import sys, json
 
-from .file import File
+from .file import File, MicrocodeFile
 from .header_file import HeaderFile
 from .pubkey_file import PubkeyFile
 from .blob import Blob
@@ -149,6 +149,10 @@ class PSPTool:
                     info.append('read only')
             if file.get_readable_type() == "APOB":
                 info.append(f'destination({file.get_readable_destination_address()})')
+
+            if type(file) == MicrocodeFile:
+                info.append(f'patch_level({file.get_readable_version()})')
+                info.append(f'date({file.get_readable_date()})')
 
             all_values = [
                 '',
