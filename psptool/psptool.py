@@ -81,7 +81,7 @@ class PSPTool:
                     '',
                     index,
                     hex(directory.get_address()),
-                    directory.zen_generation,
+                    directory.generation,
                     directory.magic.decode('utf-8', 'backslashreplace'),
                     ', '.join([hex(sda) for sda in directory.secondary_directory_offsets])
                 ])

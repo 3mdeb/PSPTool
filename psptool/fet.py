@@ -114,15 +114,7 @@ class Fet(NestedBuffer):
                 entry_addr &= self.rom.addr_mask
 
             # entry_addr += self.blob_offset
-            zen_generation_id = combo_dir[i*16+5:i*16+8]
-            zen_generation = 'unknown'
-            for possible_zen_generation in ZEN_GENERATION_IDS:
-                if zen_generation_id in ZEN_GENERATION_IDS[possible_zen_generation]:
-                    zen_generation = possible_zen_generation
-            if zen_generation == 'unknown':
-                self.psptool.ph.print_warning(f"Unknown zen_generation_id {hex(int.from_bytes(zen_generation_id, 'little'))}")
-                zen_generation = hex(int.from_bytes(combo_dir[i*16+4:i*16+8], 'little'))
-
-            results.append((entry_addr, zen_generation))
+            zen_generation_id = combo_dir[i*16+4:i*16+8]
+            results.append((entry_addr, zen_generation_id))
 
         return results

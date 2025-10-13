@@ -31,7 +31,7 @@ from typing import List
 # Family 17h Models 10h-1Fh (Picasso) Zen+ - PSP_ID: 0xBC0A00XX
 # Family 17h Models 20h-2Fh (Raven2 x86) Zen - PSP_ID: 0xBC0A01XX
 # Family 17h Models 30h-3Fh (Starship) Zen 2 - PSP_ID: 0xBC0B00XX
-# Family 17h Models 47h (Cardinal) Zen 2
+# Family 17h Models 47h     (Cardinal) Zen 2
 # Family 17h Models 60h-67h (Renoir) Zen 2 - PSP_ID: 0xBC0C00XX
 # Family 17h Models 68h-6Fh (Lucienne) Zen 2 - PSP_ID: 0xBC0C00XX
 # Family 17h Models 70h-7Fh (Matisse) Zen 2 - PSP_ID: 0xBC0B0500
@@ -117,15 +117,7 @@ class Directory(NestedBuffer):
             for tertiary_directory_offset in directory.tertiary_directory_offsets:
                 directory_body = fet.rom.get_bytes(tertiary_directory_offset, 32)
                 actual_tertiary_offset = int.from_bytes(directory_body[16:20], 'little')
-                zen_generation_id = directory_body[21:24]
-                zen_generation = 'unknown'
-                for possible_zen_generation in ZEN_GENERATION_IDS:
-                    if zen_generation_id in ZEN_GENERATION_IDS[possible_zen_generation]:
-                        zen_generation = possible_zen_generation
-                if zen_generation == 'unknown':
-                    fet.psptool.ph.print_warning(f"Unknown zen_generation_id {hex(int.from_bytes(zen_generation_id, 'little'))}")
-                    zen_generation = hex(int.from_bytes(directory_body[20:24], 'little'))
-
+                zen_generation = directory_body[20:24]
                 # Resolve one more indirection
                 tertiary_directories = cls.create_directories_if_not_exist(actual_tertiary_offset, fet, zen_generation)
                 created_directories += tertiary_directories
@@ -153,8 +145,15 @@ class Directory(NestedBuffer):
         self.rom = parent_rom
         self.buffer_offset = offset
         self.psptool = psptool
-        self.zen_generation = zen_generation
         self.bios_directory_type = BiosDirectory
+        self.zen_generation_id = None
+        self.zen_generation = 'Unknown'
+
+        if zen_generation is not None:
+            self.zen_generation_id = zen_generation
+            for possible_zen_generation in ZEN_GENERATION_IDS:
+                if self.zen_generation_id[1:4] in ZEN_GENERATION_IDS[possible_zen_generation]:
+                    self.zen_generation = possible_zen_generation
 
         # a directory must parse itself before it knows its size and can initialize its buffer
         self._count = int.from_bytes(self.rom[self.buffer_offset + 8: self.buffer_offset + 12], 'little')
@@ -198,6 +197,14 @@ class Directory(NestedBuffer):
 
     def __repr__(self):
         return f'{self.__class__.__name__}(address={hex(self.get_address())}, magic={self.magic}, count={self.count})'
+
+    @property
+    def generation(self):
+        if self.zen_generation_id is None:
+            return self.zen_generation
+
+        psp_id = hex(int.from_bytes(self.zen_generation_id, 'little'))
+        return f'{self.zen_generation} (PSP ID: {psp_id})'
 
     @property
     def count(self):
