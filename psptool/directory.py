@@ -22,6 +22,54 @@ from .file import File, BiosFile, SECONDARY_DIRECTORY_ENTRY_TYPES, TERTIARY_DIRE
 
 from typing import List
 
+# For family/model/codename/generation see:
+# https://github.com/llvm/llvm-project/blob/main/llvm/lib/TargetParser/Host.cpp
+# https://en.wikichip.org/wiki/amd/cpuid
+
+# Family 17h Models 00h-0Fh (Zeppelin) Zen - PSP_ID: 0xBC0900XX
+# Family 17h Models 10h-1Fh (Raven1) Zen - PSP_ID: 0xBC0A00XX
+# Family 17h Models 10h-1Fh (Picasso) Zen+ - PSP_ID: 0xBC0A00XX
+# Family 17h Models 20h-2Fh (Raven2 x86) Zen - PSP_ID: 0xBC0A01XX
+# Family 17h Models 30h-3Fh (Starship) Zen 2 - PSP_ID: 0xBC0B00XX
+# Family 17h Models 47h (Cardinal) Zen 2
+# Family 17h Models 60h-67h (Renoir) Zen 2 - PSP_ID: 0xBC0C00XX
+# Family 17h Models 68h-6Fh (Lucienne) Zen 2 - PSP_ID: 0xBC0C00XX
+# Family 17h Models 70h-7Fh (Matisse) Zen 2 - PSP_ID: 0xBC0B0500
+# Family 17h Models 84h-87h (ProjectX) Zen 2
+# Family 17h Models 90h-97h (VanGogh) Zen 2
+# Family 17h Models 98h-9Fh (Mero) Zen 2
+# Family 17h Models A0h-AFh (Mendocino) Zen 2 - PSP_ID: 0xBC0D09XX
+# Family 19h Models 00h-0Fh (Genesis, Chagall) Zen 3 - PSP_ID: 0xBC0B0DXX
+# Family 19h Models 20h-2Fh (Vermeer) Zen 3 - PSP_ID: 0xBC0B01XX
+# Family 19h Models 30h-3Fh (Badami) Zen 3  - PSP_ID: 0xBC0B0Fxx
+# Family 19h Models 40h-4Fh (Rembrandt) Zen 3+ - PSP_ID: 0xBC0D02xx
+# Family 19h Models 50h-5Fh (Cezanne) Zen 3 - PSP_ID: 0xBC0C0140
+# Family 19h Models 10h-1Fh (Stones; Storm Peak) Zen 4 - PSP_ID: 0xBC0D01XX/0xBC0D0111
+# Family 19h Models 60h-6Fh (Raphael) Zen 4 - PSP_ID: 0xBC0D03XX
+# Family 19h Models 70h-77h (Phoenix, Hawkpoint1) Zen 4 - PSP_ID: 0xBC0D04XX
+# Family 19h Models 78h-7Fh (Phoenix 2, Hawkpoint2) Zen 4 - PSP_ID: 0xBC0D0BXX
+# Family 19h Models A0h-AFh (Stones-Dense) Zen 4 - PSP_ID: 0xBC0D01XX
+# Family 1Ah Models 00h-0Fh (Breithorn) Zen 5 - PSP_ID: 0xBC0E00XX/0xBC0E0CXX/0xBC0E0DXX
+# Family 1Ah Models 10h-1Fh (Breithorn-Dense) Zen 5 - PSP_ID: 0xBC0E00XX/0xBC0E0CXX/0xBC0E0DXX
+# Family 1Ah Models 20h-2Fh (Strix 1) Zen 5 - PSP_ID: 0xBC0E0200
+# Family 1Ah Models 30h-37h (Strix 2) Zen 5
+# Family 1Ah Models 38h-3Fh (Strix 3) Zen 5 - PSP_ID: 0xBC0E0900
+# Family 1Ah Models 40h-4Fh (Granite Ridge) Zen 5 - PSP_ID: 0xBC0D03XX
+# Family 1Ah Models 60h-63h (Krackan1) Zen 5 - PSP_ID: 0xBC0E0B00
+# Family 1Ah Models 68h-6Fh (Krackan2e) Zen 5 - PSP_ID: 0xBC0E1000
+# Family 1Ah Models 70h-77h (Sarlak) Zen 5
+# Family 1Ah Models D0h-D7h (Annapurna) Zen 5
+
+ZEN_GENERATION_IDS = {'Zen 1':   [b'\x00\x09\xBC', b'\x00\x0A\xBC', b'\x01\x0A\xBC'],
+                      'Zen 2':   [b'\x00\x0B\xBC', b'\x05\x0B\xBC', b'\x00\x0C\xBC',
+                                  b'\x09\x0D\xBC'],
+                      'Zen 3':   [b'\x01\x0B\xBC', b'\x0D\x0B\xBC', b'\x0F\x0B\xBC',
+                                  b'\x01\x0C\xBC', b'\x02\x0D\xBC',],
+                      'Zen 4':   [b'\x01\x0D\xBC', b'\x04\x0D\xBC', b'\x0B\x0D\xBC'],
+                      'Zen 4/5': [b'\x03\x0D\xBC' ],
+                      'Zen 5':   [b'\x03\x0D\xBC', b'\x00\x0E\xBC', b'\x02\x0E\xBC',
+                                  b'\x09\x0E\xBC', b'\xB0\x0E\xBC', b'\x0C\x0E\xBC',
+                                  b'\x0D\x0E\xBC', b'\x10\x0E\xBC']}
 
 class Directory(NestedBuffer):
     DIRECTORY_MAGICS = [b'$PSP', b'$PL2']
@@ -69,6 +117,15 @@ class Directory(NestedBuffer):
             for tertiary_directory_offset in directory.tertiary_directory_offsets:
                 directory_body = fet.rom.get_bytes(tertiary_directory_offset, 32)
                 actual_tertiary_offset = int.from_bytes(directory_body[16:20], 'little')
+                zen_generation_id = directory_body[21:24]
+                zen_generation = 'unknown'
+                for possible_zen_generation in ZEN_GENERATION_IDS:
+                    if zen_generation_id in ZEN_GENERATION_IDS[possible_zen_generation]:
+                        zen_generation = possible_zen_generation
+                if zen_generation == 'unknown':
+                    fet.psptool.ph.print_warning(f"Unknown zen_generation_id {hex(int.from_bytes(zen_generation_id, 'little'))}")
+                    zen_generation = hex(int.from_bytes(directory_body[20:24], 'little'))
+
                 # Resolve one more indirection
                 tertiary_directories = cls.create_directories_if_not_exist(actual_tertiary_offset, fet, zen_generation)
                 created_directories += tertiary_directories

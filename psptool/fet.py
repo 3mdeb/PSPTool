@@ -15,15 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .utils import NestedBuffer
-from .directory import Directory
+from .directory import Directory, ZEN_GENERATION_IDS
 
 from typing import List
-
-
-ZEN_GENERATION_IDS = {'Zen 1': [b'\x00\x09\xBC', b'\x00\x0A\xBC'],
-                      'Zen 2': [b'\x05\x0B\xBC', b'\x01\x0A\xBC'],
-                      'Zen 3': [b'\x01\x0C\xBC', b'\x00\x0C\xBC']}
-
 
 class EmptyFet(Exception):
     pass
@@ -126,7 +120,8 @@ class Fet(NestedBuffer):
                 if zen_generation_id in ZEN_GENERATION_IDS[possible_zen_generation]:
                     zen_generation = possible_zen_generation
             if zen_generation == 'unknown':
-                self.psptool.ph.print_warning(f"Unknown {zen_generation_id=}")
+                self.psptool.ph.print_warning(f"Unknown zen_generation_id {hex(int.from_bytes(zen_generation_id, 'little'))}")
+                zen_generation = hex(int.from_bytes(combo_dir[i*16+4:i*16+8], 'little'))
 
             results.append((entry_addr, zen_generation))
 
