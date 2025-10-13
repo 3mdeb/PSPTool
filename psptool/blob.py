@@ -40,6 +40,7 @@ class Blob(NestedBuffer):
         self.roms: List[Rom] = []
 
         possible_fet_offsets = [
+            0x001000,
             # as seen by a PSPTrace Zen 1 boot
             0x020000,
             0xfa0000,
